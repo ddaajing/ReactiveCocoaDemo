@@ -25,24 +25,27 @@ static NSString *const kSubscribeURL = @"http://api.geonames.org/citiesJSON?nort
 -(id)init {
     self = [super init];
     if(!self) return nil;
-
+    
     [self initSearchSubscrition];
     
     return self;
 }
 
 - (void)initSearchSubscrition {
-    [[self.searchSignal deliverOn:[RACScheduler mainThreadScheduler]] subscribeNext:^(NSDictionary *jsonSearchResult) {
-        NSArray *rawArray = jsonSearchResult[@"geonames"];
+    [[self.searchSignal deliverOn:[RACScheduler mainThreadScheduler]] subscribeNext:^(RACTuple *jsonSearchResult) {
+        NSDictionary *response;
+        if (jsonSearchResult.count) {
+            response = jsonSearchResult.first;
+        }
+        NSArray *rawArray = response[@"geonames"];
         
-        self.cities =
-            [[[rawArray.rac_sequence
-               map:^id(NSDictionary *rawDic) {
-                                NSMutableDictionary *dic = [(NSDictionary *)rawDic mutableCopy];
-                                City *city = [MTLJSONAdapter modelOfClass:City.class fromJSONDictionary:dic error:nil];
-                                [self downloadImageForCity:city];
-                                return city;
-            }] array] mutableCopy];
+        self.cities = [[[rawArray.rac_sequence
+                         map:^id(NSDictionary *rawDic) {
+                             NSMutableDictionary *dic = [(NSDictionary *)rawDic mutableCopy];
+                             City *city = [MTLJSONAdapter modelOfClass:City.class fromJSONDictionary:dic error:nil];
+                             [self downloadImageForCity:city];
+                             return city;
+                         }] array] mutableCopy];
     }];
     
     [self.searchSignal subscribeError:^(NSError *error) {
@@ -55,7 +58,7 @@ static NSString *const kSubscribeURL = @"http://api.geonames.org/citiesJSON?nort
         AFHTTPRequestOperationManager *manager = [AFHTTPRequestOperationManager manager];
         manager.requestSerializer = [AFJSONRequestSerializer new];
         NSDictionary *params = @{@"user_id": @"88"};
-         _searchSignal = [manager rac_GET:kSubscribeURL parameters:params];
+        _searchSignal = [manager rac_GET:kSubscribeURL parameters:params];
     }
     return _searchSignal;
 }
@@ -70,9 +73,9 @@ static NSString *const kSubscribeURL = @"http://api.geonames.org/citiesJSON?nort
     NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:urlString]];
     
     return [[[NSURLConnection rac_sendAsynchronousRequest:request]
-                    reduceEach:^id(NSURLResponse *response, NSData *data){
-                        return data;
-                }] deliverOn:[RACScheduler mainThreadScheduler]];
+             reduceEach:^id(NSURLResponse *response, NSData *data){
+                 return data;
+             }] deliverOn:[RACScheduler mainThreadScheduler]];
 }
 
 @end

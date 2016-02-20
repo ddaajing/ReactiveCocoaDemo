@@ -59,16 +59,12 @@
 
 // 绑定viewModel
 -(void)bindViewModel {
-    @weakify(self);
 
     // init viewModel
     self.viewModel = [AddCityViewModel new];
     
     // set validation once user input
-    [[self.tfCityName.rac_textSignal distinctUntilChanged] subscribeNext:^(NSString *name) {
-        @strongify(self);
-        self.viewModel.cityName = name;
-    }];
+    RAC(self.viewModel, cityName) = [self.tfCityName.rac_textSignal distinctUntilChanged];
     
     self.btnSave.rac_command = self.viewModel.saveCommand;
     
